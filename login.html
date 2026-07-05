@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — OversightAI</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-page">
+
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="logo">OversightAI</div>
+                <h2>Welcome Back</h2>
+                <p id="formTitle">Log in to your dashboard</p>
+            </div>
+
+            <form id="authForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="you@company.com" required />
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required />
+                </div>
+                <div class="form-group" id="companyGroup" style="display:none;">
+                    <label for="companyName">Company Name</label>
+                    <input type="text" id="companyName" placeholder="Your company name" />
+                </div>
+                <button type="submit" class="btn-primary full-width" id="authButton">Log In</button>
+            </form>
+
+            <div class="auth-footer">
+                <p id="toggleText">Don't have an account? <a href="#" id="toggleLink">Sign up</a></p>
+            </div>
+
+            <div class="auth-badges">
+                <span>🔒 256-bit encryption</span>
+                <span>✅ SOC2 compliant</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Toggle between login and signup ──
+        let isLogin = true;
+
+        document.getElementById('toggleLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            isLogin = !isLogin;
+
+            if (isLogin) {
+                document.getElementById('formTitle').textContent = 'Log in to your dashboard';
+                document.getElementById('authButton').textContent = 'Log In';
+                document.getElementById('toggleText').innerHTML = `Don't have an account? <a href="#" id="toggleLink">Sign up</a>`;
+                document.getElementById('companyGroup').style.display = 'none';
+            } else {
+                document.getElementById('formTitle').textContent = 'Create your account';
+                document.getElementById('authButton').textContent = 'Sign Up';
+                document.getElementById('toggleText').innerHTML = `Already have an account? <a href="#" id="toggleLink">Log in</a>`;
+                document.getElementById('companyGroup').style.display = 'block';
+            }
+
+            // Re-bind the toggle link
+            document.getElementById('toggleLink').addEventListener('click', arguments.callee);
+        });
+
+        // ── Handle form submission ──
+        document.getElementById('authForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const companyName = document.getElementById('companyName').value;
+
+            const endpoint = isLogin ? '/api/login' : '/api/signup';
+            const body = isLogin ? { email, password } : { email, password, companyName };
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert(data.error || 'Something went wrong');
+                }
+            } catch (error) {
+                alert('Network error. Make sure the server is running.');
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

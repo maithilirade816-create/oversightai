@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — OversightAI</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo">OversightAI</div>
+        <nav class="sidebar-nav">
+            <a href="#" class="active">📊 Dashboard</a>
+            <a href="#">📋 Activity Log</a>
+            <a href="#">🛡️ Security</a>
+            <a href="support.html">💬 Support</a>
+            <a href="#">⚙️ Settings</a>
+        </nav>
+        <div class="sidebar-user">
+            <span id="userEmail">User</span>
+            <button id="logoutBtn">Logout</button>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <h1>Dashboard</h1>
+            <div class="header-actions">
+                <span id="statusBadge" class="status-badge">🟢 All systems normal</span>
+                <button class="btn-outline small" id="refreshBtn">🔄 Refresh</button>
+            </div>
+        </header>
+
+        <!-- Metrics Grid -->
+        <section class="metrics-grid" id="metricsGrid">
+            <div class="metric-card">
+                <span class="metric-label">Total AI Requests</span>
+                <span class="metric-value" id="totalRequests">0</span>
+                <span class="metric-change">Loading...</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">Data Leaks Blocked</span>
+                <span class="metric-value" id="leaksBlocked">0</span>
+                <span class="metric-change">Loading...</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">Active Agents</span>
+                <span class="metric-value" id="activeAgents">0</span>
+                <span class="metric-change">Loading...</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">Alerts</span>
+                <span class="metric-value" id="alerts">0</span>
+                <span class="metric-change urgent">⚠️ No alerts</span>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="activity-section">
+            <h2>Recent Activity</h2>
+            <div class="activity-table-container">
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Tool</th>
+                            <th>Prompt Preview</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityLog">
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
+                                ⏳ Loading activity...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ── Check authentication ──
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'login.html';
+        }
+
+        // ── Show user email ──
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.email) {
+            document.getElementById('userEmail').textContent = user.email;
+        }
+
+        // ── Fetch dashboard data ──
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Update metrics
+                document.getElementById('totalRequests').textContent = data.metrics.totalRequests || 0;
+                document.getElementById('leaksBlocked').textContent = data.metrics.leaksBlocked || 0;
+                document.getElementById('activeAgents').textContent = data.metrics.activeAgents || 0;
+                document.getElementById('alerts').textContent = data.metrics.alerts || 0;
+
+                // Update activity log
+                const tbody = document.getElementById('activityLog');
+                tbody.innerHTML = '';
+
+                if (!data.activity || data.activity.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
+                                ✅ No activity yet. Connect your AI to start monitoring.
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    data.activity.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.user || 'Unknown'}</td>
+                            <td>${item.tool || 'Unknown'}</td>
+                            <td>${item.prompt || ''}</td>
+                            <td><span class="status-badge-table ${item.status === 'safe' ? 'status-safe' : 'status-danger'}">${item.status === 'safe' ? '✅ Safe' : '⚠️ Flagged'}</span></td>
+                            <td>${item.time || 'Just now'}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                // Update status badge
+                const badge = document.getElementById('statusBadge');
+                if (data.metrics.alerts > 0) {
+                    badge.textContent = `🔴 ${data.metrics.alerts} alerts pending`;
+                    badge.style.background = '#fee2e2';
+                    badge.style.color = '#dc2626';
+                } else {
+                    badge.textContent = '🟢 All systems normal';
+                    badge.style.background = '#dbeafe';
+                    badge.style.color = '#0066ff';
+                }
+
+            } catch (error) {
+                console.error('Error fetching dashboard:', error);
+                document.querySelector('.metrics-grid').innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #dc2626; background: #fee2e2; border-radius: 12px;">
+                        ⚠️ Could not connect to the server. Make sure the backend is running.
+                    </div>
+                `;
+            }
+        }
+
+        // ── Logout ──
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        });
+
+        // ── Refresh button ──
+        document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+
+        // ── Load on page open ──
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+
+        // ── Auto-refresh every 30 seconds ──
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+</html>
