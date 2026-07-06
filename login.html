@@ -12,8 +12,8 @@
         <div class="auth-box">
             <div class="auth-header">
                 <div class="logo">OversightAI</div>
-                <h2>Welcome Back</h2>
-                <p id="formTitle">Log in to your dashboard</p>
+                <h2 id="formTitle">Welcome Back</h2>
+                <p id="formSubtitle">Log in to your dashboard</p>
             </div>
 
             <form id="authForm">
@@ -29,6 +29,18 @@
                     <label for="companyName">Company Name</label>
                     <input type="text" id="companyName" placeholder="Your company name" />
                 </div>
+
+                <!-- ── ✅ LEGAL AGREEMENT CHECKBOX ── -->
+                <div class="form-group" id="termsGroup" style="display: none; margin-top: 8px;">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <input type="checkbox" id="agreeTerms" required style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
+                        <label for="agreeTerms" style="font-size: 0.9rem; color: #4a5a72; font-weight: normal; cursor: pointer; line-height: 1.5;">
+                            I agree to the <a href="terms.html" target="_blank" style="color: #0066ff; text-decoration: underline;">Terms & Conditions</a> and
+                            <a href="privacy.html" target="_blank" style="color: #0066ff; text-decoration: underline;">Privacy Policy</a>.
+                        </label>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn-primary full-width" id="authButton">Log In</button>
             </form>
 
@@ -51,16 +63,25 @@
             e.preventDefault();
             isLogin = !isLogin;
 
+            const termsGroup = document.getElementById('termsGroup');
+            const companyGroup = document.getElementById('companyGroup');
+
             if (isLogin) {
-                document.getElementById('formTitle').textContent = 'Log in to your dashboard';
+                document.getElementById('formTitle').textContent = 'Welcome Back';
+                document.getElementById('formSubtitle').textContent = 'Log in to your dashboard';
                 document.getElementById('authButton').textContent = 'Log In';
                 document.getElementById('toggleText').innerHTML = `Don't have an account? <a href="#" id="toggleLink">Sign up</a>`;
-                document.getElementById('companyGroup').style.display = 'none';
+                companyGroup.style.display = 'none';
+                termsGroup.style.display = 'none';
+                document.getElementById('agreeTerms').required = false;
             } else {
-                document.getElementById('formTitle').textContent = 'Create your account';
+                document.getElementById('formTitle').textContent = 'Create Your Account';
+                document.getElementById('formSubtitle').textContent = 'Start monitoring your AI today';
                 document.getElementById('authButton').textContent = 'Sign Up';
                 document.getElementById('toggleText').innerHTML = `Already have an account? <a href="#" id="toggleLink">Log in</a>`;
-                document.getElementById('companyGroup').style.display = 'block';
+                companyGroup.style.display = 'block';
+                termsGroup.style.display = 'block';
+                document.getElementById('agreeTerms').required = true;
             }
 
             // Re-bind the toggle link
@@ -74,6 +95,15 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const companyName = document.getElementById('companyName').value;
+
+            // ── ✅ CHECK LEGAL AGREEMENT FOR SIGNUP ──
+            if (!isLogin) {
+                const agreeCheckbox = document.getElementById('agreeTerms');
+                if (!agreeCheckbox.checked) {
+                    alert('Please agree to the Terms & Conditions and Privacy Policy to create an account.');
+                    return;
+                }
+            }
 
             const endpoint = isLogin ? '/api/login' : '/api/signup';
             const body = isLogin ? { email, password } : { email, password, companyName };
