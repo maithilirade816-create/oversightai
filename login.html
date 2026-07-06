@@ -30,7 +30,6 @@
                     <input type="text" id="companyName" placeholder="Your company name" />
                 </div>
 
-                <!-- ── ✅ LEGAL AGREEMENT CHECKBOX ── -->
                 <div class="form-group" id="termsGroup" style="display: none; margin-top: 8px;">
                     <div style="display: flex; align-items: flex-start; gap: 10px;">
                         <input type="checkbox" id="agreeTerms" required style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
@@ -47,16 +46,11 @@
             <div class="auth-footer">
                 <p id="toggleText">Don't have an account? <a href="#" id="toggleLink">Sign up</a></p>
             </div>
-
-            <div class="auth-badges">
-                <span>🔒 256-bit encryption</span>
-                <span>✅ SOC2 compliant</span>
-            </div>
         </div>
     </div>
 
     <script>
-        // ── References ──
+        // ── Get elements ──
         const form = document.getElementById('authForm');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
@@ -95,29 +89,40 @@
                 agreeCheckbox.required = true;
             }
 
-            // Re-bind the toggle link
+            // Rebind toggle link
             document.getElementById('toggleLink').addEventListener('click', toggleForm);
         }
 
-        // ── Attach toggle listener ──
         toggleLink.addEventListener('click', toggleForm);
 
-        // ── Handle form submission ──
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // ── ──────────────────────────────────────────────
+        // ── ✅ FORM SUBMISSION (WITH DEBUG LOGS) ──
+        // ── ──────────────────────────────────────────────
+
+        form.addEventListener('submit', async function(event) {
+            // ── 1. STOP page refresh ──
+            event.preventDefault();
+            console.log('✅ Form submitted!');
 
             const email = emailInput.value.trim();
             const password = passwordInput.value.trim();
             const companyName = companyInput.value.trim();
 
-            // ── Validate legal agreement for signup ──
+            console.log('📧 Email:', email);
+            console.log('🔐 Password:', password ? '✅ Provided' : '❌ Missing');
+
+            // ── 2. Validate agreement for signup ──
             if (!isLogin && !agreeCheckbox.checked) {
-                alert('Please agree to the Terms & Conditions and Privacy Policy to create an account.');
+                alert('Please agree to the Terms & Conditions and Privacy Policy.');
                 return;
             }
 
+            // ── 3. Build request ──
             const endpoint = isLogin ? '/api/login' : '/api/signup';
             const body = isLogin ? { email, password } : { email, password, companyName };
+
+            console.log('📡 Sending to:', endpoint);
+            console.log('📦 Payload:', body);
 
             try {
                 const response = await fetch(endpoint, {
@@ -126,18 +131,22 @@
                     body: JSON.stringify(body),
                 });
 
+                console.log('📨 Response status:', response.status);
+
                 const data = await response.json();
+                console.log('📄 Response data:', data);
 
                 if (response.ok) {
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
+                    console.log('✅ Login successful, redirecting...');
                     window.location.href = 'dashboard.html';
                 } else {
-                    alert(data.error || 'Something went wrong');
+                    alert(data.error || 'Login failed');
                 }
             } catch (error) {
+                console.error('❌ Network error:', error);
                 alert('Network error. Make sure the server is running.');
-                console.error('Error:', error);
             }
         });
     </script>
