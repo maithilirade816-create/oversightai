@@ -17,15 +17,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── ────────────────────────────────────────────── ──
-// ── ✅ THIS IS THE FIX: Find the correct folder ──
+// ── ✅ FIND THE CORRECT FOLDER FOR STATIC FILES ──
 // ── ────────────────────────────────────────────── ──
 
-// Try to find index.html in different locations
-let staticPath = path.join(__dirname, '..'); // Parent folder (oversightai)
+let staticPath = path.join(__dirname, '..');
 
-// If that doesn't work, try the current folder (backend)
 if (!fs.existsSync(path.join(staticPath, 'index.html'))) {
-    staticPath = __dirname; // Current folder (backend)
+    staticPath = __dirname;
     console.log('📁 Using backend folder for static files');
 } else {
     console.log('📁 Using project root for static files');
@@ -37,13 +35,12 @@ console.log('📁 STATIC FILES PATH:', staticPath);
 app.use(cors());
 app.use(express.json());
 
-// ── Serve static files from the CORRECT folder ──
+// ── Serve static files ──
 app.use(express.static(staticPath));
 
-// ── Explicit routes for HTML files ──
+// ── Routes for HTML files ──
 app.get('/', (req, res) => {
     const filePath = path.join(staticPath, 'index.html');
-    console.log('📁 Serving:', filePath);
     if (fs.existsSync(filePath)) {
         res.sendFile(filePath);
     } else {
@@ -214,6 +211,8 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
                 status: a.status,
                 time: a.createdAt ? new Date(a.createdAt).toLocaleString() : 'Just now',
             })),
+            // ── ✅ API KEY ADDED HERE ──
+            apiKey: req.user.apiKey,
         });
     } catch (error) {
         console.error('Dashboard error:', error);
@@ -326,7 +325,7 @@ app.put('/api/alerts/:id/resolve', authenticate, async (req, res) => {
 });
 
 // ── ────────────────────────────────────────────── ──
-// ── FOR VERCEL: Export the app ──
+// ── EXPORT FOR RENDER ──
 // ── ────────────────────────────────────────────── ──
 module.exports = app;
 
