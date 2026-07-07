@@ -26,53 +26,91 @@
     <main class="dashboard-main">
         <header class="dashboard-header">
             <h1>Security</h1>
+            <div class="header-actions">
+                <span class="status-badge">🟢 All secure</span>
+            </div>
         </header>
 
-        <div id="output" style="padding:20px; background:white; border-radius:12px;">
-            Loading...
-        </div>
+        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; margin-bottom: 24px;">
+            <h2 style="font-size: 1.25rem; margin-bottom: 8px;">🔑 Your API Key</h2>
+            <p style="color: #4a5a72; font-size: 0.95rem; margin-bottom: 12px;">
+                Use this key to connect your AI to OversightAI. Keep it secret and never share it publicly.
+            </p>
+            <div style="display: flex; align-items: center; gap: 12px; background: #f8fafc; padding: 16px 20px; border-radius: 8px; border: 1px solid #e9edf3;">
+                <code id="apiKeyDisplay" style="flex: 1; font-size: 1rem; color: #0a1929; word-break: break-all; font-family: monospace;">
+                    loading...
+                </code>
+                <button onclick="copyApiKey()" style="background: #0066ff; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                    📋 Copy
+                </button>
+            </div>
+            <p style="margin-top: 12px; font-size: 0.85rem; color: #4a5a72;">
+                💡 Use it in your SDK: <code style="background: #e9edf3; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">apiKey: 'your-key-here'</code>
+            </p>
+        </section>
+
+        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3;">
+            <h2 style="font-size: 1.25rem; margin-bottom: 8px;">🔐 Security Tips</h2>
+            <ul style="color: #4a5a72; line-height: 2; margin-left: 20px;">
+                <li>✅ Never share your API key in public or in code repositories.</li>
+                <li>✅ Use strong passwords and enable two-factor authentication if available.</li>
+                <li>✅ Monitor your account activity regularly for unauthorized access.</li>
+                <li>✅ If you suspect a breach, regenerate your API key immediately.</li>
+            </ul>
+        </section>
     </main>
 
     <script>
+        const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
+
         if (!token) window.location.href = 'login.html';
 
-        document.getElementById('userEmail').textContent = JSON.parse(localStorage.getItem('user') || '{}').email || 'User';
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.email) document.getElementById('userEmail').textContent = user.email;
 
-        async function loadData() {
-            const output = document.getElementById('output');
-            output.innerHTML = '⏳ Loading...';
+        function copyApiKey() {
+            const key = document.getElementById('apiKeyDisplay').textContent;
+            if (key && key !== 'loading...' && key !== 'No API key found') {
+                navigator.clipboard.writeText(key).then(() => {
+                    alert('✅ API key copied to clipboard!');
+                }).catch(() => {
+                    alert('❌ Could not copy. Please select and copy manually.');
+                });
+            } else {
+                alert('❌ No API key available. Please contact support.');
+            }
+        }
 
+        async function loadSecurity() {
             try {
-                const res = await fetch('https://oversightai.onrender.com/api/dashboard', {
+                const response = await fetch(`${API_BASE}/api/dashboard`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                if (res.status === 401) {
+                if (response.status === 401) {
                     localStorage.removeItem('token');
+                    localStorage.removeItem('user');
                     window.location.href = 'login.html';
                     return;
                 }
 
-                const data = await res.json();
-                output.innerHTML = `
-                    <p><strong>Email:</strong> ${data.email || 'N/A'}</p>
-                    <p><strong>API Key:</strong> <code>${data.apiKey || 'N/A'}</code></p>
-                    <p><strong>Company:</strong> ${data.companyName || 'N/A'}</p>
-                    <p><strong>Total Requests:</strong> ${data.metrics?.totalRequests || 0}</p>
-                `;
+                const data = await response.json();
+                document.getElementById('apiKeyDisplay').textContent = data.apiKey || 'No API key found';
 
-            } catch (err) {
-                output.innerHTML = `❌ Error: ${err.message}`;
+            } catch (error) {
+                console.error('Error loading security:', error);
+                document.getElementById('apiKeyDisplay').textContent = '⚠️ Could not load API key';
             }
         }
 
         document.getElementById('logoutBtn').addEventListener('click', function() {
-            localStorage.clear();
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             window.location.href = 'login.html';
         });
 
-        loadData();
+        document.addEventListener('DOMContentLoaded', loadSecurity);
     </script>
 </body>
 </html>
