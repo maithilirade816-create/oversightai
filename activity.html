@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
     <title>Activity Log — OversightAI</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -26,127 +25,89 @@
     <main class="dashboard-main">
         <header class="dashboard-header">
             <h1>Activity Log</h1>
-            <div class="header-actions">
-                <span id="statusBadge" class="status-badge">All systems normal</span>
-                <button class="btn-outline small" id="refreshBtn">Refresh</button>
-            </div>
+            <button id="refreshBtn">Refresh</button>
         </header>
 
-        <section class="activity-section">
-            <h2>All AI Activity</h2>
-            <div class="activity-table-container">
-                <table class="activity-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Tool</th>
-                            <th>Prompt Preview</th>
-                            <th>Status</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody id="activityLog">
-                        <tr>
-                            <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
-                                Loading activity...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+        <!-- ── THIS IS WHERE DATA GOES ── -->
+        <div id="output" style="padding:20px; background:white; border-radius:12px; margin-top:20px; font-family:monospace;">
+            Loading...
+        </div>
     </main>
 
     <script>
         console.log('Script is running!');
 
-        const API_BASE = 'https://oversightai.onrender.com';
-        const token = localStorage.getItem('token');
-
+        var token = localStorage.getItem('token');
         if (!token) {
             console.log('No token found, redirecting...');
             window.location.href = 'login.html';
         }
 
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user.email) document.getElementById('userEmail').textContent = user.email;
+        var user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.email) {
+            document.getElementById('userEmail').textContent = user.email;
+        }
 
-        async function loadActivity() {
+        function loadData() {
+            var output = document.getElementById('output');
+            output.innerHTML = 'Loading...';
             console.log('Fetching activity data...');
-            try {
-                const response = await fetch(API_BASE + '/api/dashboard', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
 
+            fetch('https://oversightai.onrender.com/api/dashboard', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(function(response) {
                 if (response.status === 401) {
                     localStorage.removeItem('token');
-                    localStorage.removeItem('user');
                     window.location.href = 'login.html';
                     return;
                 }
-
-                if (!response.ok) throw new Error('Failed to fetch activity');
-
-                const data = await response.json();
+                return response.json();
+            })
+            .then(function(data) {
                 console.log('Data received:', data);
+                // ── DISPLAY THE DATA ──
+                var html = '<h3>Metrics</h3>';
+                html += '<ul>';
+                html += '<li>Total Requests: ' + (data.metrics.totalRequests || 0) + '</li>';
+                html += '<li>Leaks Blocked: ' + (data.metrics.leaksBlocked || 0) + '</li>';
+                html += '<li>Active Agents: ' + (data.metrics.activeAgents || 0) + '</li>';
+                html += '<li>Alerts: ' + (data.metrics.alerts || 0) + '</li>';
+                html += '</ul>';
 
-                const tbody = document.getElementById('activityLog');
-                tbody.innerHTML = '';
-
-                if (!data.activity || data.activity.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
-                                No activity yet. Connect your AI to start monitoring.
-                            </td>
-                        </tr>
-                    `;
-                } else {
+                html += '<h3>Activity</h3>';
+                if (data.activity && data.activity.length > 0) {
+                    html += '<table border="1" cellpadding="8" style="width:100%; border-collapse:collapse;">';
+                    html += '<tr><th>User</th><th>Tool</th><th>Prompt</th><th>Status</th><th>Time</th></tr>';
                     data.activity.forEach(function(item) {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.user || 'Unknown'}</td>
-                            <td>${item.tool || 'Unknown'}</td>
-                            <td>${item.prompt || ''}</td>
-                            <td><span class="status-badge-table ${item.status === 'safe' ? 'status-safe' : 'status-danger'}">${item.status === 'safe' ? 'Safe' : 'Flagged'}</span></td>
-                            <td>${item.time || 'Just now'}</td>
-                        `;
-                        tbody.appendChild(row);
+                        html += '<tr>';
+                        html += '<td>' + (item.user || 'Unknown') + '</td>';
+                        html += '<td>' + (item.tool || 'Unknown') + '</td>';
+                        html += '<td>' + (item.prompt || '') + '</td>';
+                        html += '<td>' + (item.status || 'Unknown') + '</td>';
+                        html += '<td>' + (item.time || 'Just now') + '</td>';
+                        html += '</tr>';
                     });
-                }
-
-                const badge = document.getElementById('statusBadge');
-                if (data.metrics && data.metrics.alerts > 0) {
-                    badge.textContent = data.metrics.alerts + ' alerts pending';
-                    badge.style.background = '#fee2e2';
-                    badge.style.color = '#dc2626';
+                    html += '</table>';
                 } else {
-                    badge.textContent = 'All systems normal';
-                    badge.style.background = '#dbeafe';
-                    badge.style.color = '#0066ff';
+                    html += '<p>No activity yet.</p>';
                 }
 
-            } catch (error) {
-                console.error('Error loading activity:', error);
-                document.getElementById('activityLog').innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align:center; padding:40px; color:#dc2626;">
-                            Could not connect to the server. Make sure the backend is running.
-                        </td>
-                    </tr>
-                `;
-            }
+                output.innerHTML = html;
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+                output.innerHTML = 'Error: ' + error.message;
+            });
         }
 
+        document.getElementById('refreshBtn').addEventListener('click', loadData);
         document.getElementById('logoutBtn').addEventListener('click', function() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            localStorage.clear();
             window.location.href = 'login.html';
         });
 
-        document.getElementById('refreshBtn').addEventListener('click', loadActivity);
-        document.addEventListener('DOMContentLoaded', loadActivity);
-        setInterval(loadActivity, 30000);
+        loadData();
     </script>
 </body>
 </html>
