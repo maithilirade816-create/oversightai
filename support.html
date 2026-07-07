@@ -24,16 +24,22 @@
             <h1>💬 Support Center</h1>
             <p>We're here to help. Reach out anytime.</p>
             <div class="support-grid">
+                <!-- ── Email Support Card ── -->
                 <div class="support-card">
                     <h3>📧 Email Support</h3>
                     <p>For general inquiries and troubleshooting:</p>
-                    <a href="mailto:oversightai.contact@gmail.com" class="btn-primary">oversightai.contact@gmail.com</a>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+                        <button onclick="copyEmail()" class="btn-primary">📋 Copy Email</button>
+                        <a href="mailto:oversightai.contact@gmail.com" class="btn-outline">📧 Open Email</a>
+                    </div>
                 </div>
+
                 <div class="support-card">
                     <h3>📞 Live Chat</h3>
                     <p>Coming soon!</p>
                     <button class="btn-primary" onclick="alert('Live chat coming soon!')">Start Chat</button>
                 </div>
+
                 <div class="support-card">
                     <h3>📚 Documentation</h3>
                     <p>How to set up OversightAI:</p>
@@ -50,6 +56,17 @@
         .support-card { background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; }
         @media (max-width: 768px) { .support-grid { grid-template-columns: 1fr; } }
     </style>
+
+    <script>
+        function copyEmail() {
+            const email = 'oversightai.contact@gmail.com';
+            navigator.clipboard.writeText(email).then(() => {
+                alert('✅ Email copied to clipboard!');
+            }).catch(() => {
+                alert('❌ Could not copy. Please copy manually.');
+            });
+        }
+    </script>
 
     <script src="app.js"></script>
 </body>
