@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings — OversightAI</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo">OversightAI</div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="activity.html">📋 Activity Log</a>
+            <a href="security.html">🛡️ Security</a>
+            <a href="support.html">💬 Support</a>
+            <a href="settings.html" class="active">⚙️ Settings</a>
+        </nav>
+        <div class="sidebar-user">
+            <span id="userEmail">User</span>
+            <button id="logoutBtn">Logout</button>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <h1>Settings</h1>
+            <div class="header-actions">
+                <span class="status-badge">⚙️ Manage your account</span>
+            </div>
+        </header>
+
+        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; margin-bottom: 24px;">
+            <h2 style="font-size: 1.25rem; margin-bottom: 8px;">👤 Account Information</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+                <div>
+                    <label style="font-weight: 500; font-size: 0.9rem; color: #4a5a72; display: block; margin-bottom: 4px;">Email</label>
+                    <input type="email" id="userEmailDisplay" value="" disabled style="width: 100%; padding: 12px; border: 1px solid #d0d9e6; border-radius: 8px; background: #f8fafc; color: #0a1929;" />
+                </div>
+                <div>
+                    <label style="font-weight: 500; font-size: 0.9rem; color: #4a5a72; display: block; margin-bottom: 4px;">Company Name</label>
+                    <input type="text" id="companyNameDisplay" value="" disabled style="width: 100%; padding: 12px; border: 1px solid #d0d9e6; border-radius: 8px; background: #f8fafc; color: #0a1929;" />
+                </div>
+            </div>
+        </section>
+
+        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; margin-bottom: 24px;">
+            <h2 style="font-size: 1.25rem; margin-bottom: 8px;">🔑 Change Password</h2>
+            <form id="changePasswordForm" style="margin-top: 16px;">
+                <div class="form-group">
+                    <label for="currentPassword">Current Password</label>
+                    <input type="password" id="currentPassword" placeholder="Enter current password" required />
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" placeholder="Enter new password" required />
+                </div>
+                <button type="submit" class="btn-primary">Update Password</button>
+            </form>
+        </section>
+
+        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #fee2e2;">
+            <h2 style="font-size: 1.25rem; margin-bottom: 8px; color: #dc2626;">⚠️ Danger Zone</h2>
+            <p style="color: #4a5a72; margin-bottom: 16px;">Once you delete your account, there is no going back. Please be certain.</p>
+            <button onclick="deleteAccount()" style="background: #dc2626; color: white; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                🗑️ Delete Account
+            </button>
+        </section>
+    </main>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'login.html';
+
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.email) {
+            document.getElementById('userEmail').textContent = user.email;
+            document.getElementById('userEmailDisplay').value = user.email;
+            document.getElementById('companyNameDisplay').value = user.companyName || 'Not set';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        });
+
+        document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+
+            if (!currentPassword || !newPassword) {
+                alert('Please fill in both fields.');
+                return;
+            }
+
+            alert('🔧 Password change will be available in the next update!');
+            this.reset();
+        });
+
+        function deleteAccount() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                if (confirm('Really? All your data will be permanently deleted.')) {
+                    alert('🗑️ Account deletion will be available in the next update.');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
