@@ -12,142 +12,103 @@
         <div class="auth-box">
             <div class="auth-header">
                 <div class="logo">OversightAI</div>
-                <h2 id="formTitle">Welcome Back</h2>
-                <p id="formSubtitle">Log in to your dashboard</p>
+                <h2>Welcome Back</h2>
+                <p>Log in to your dashboard</p>
             </div>
 
-            <form id="authForm">
+            <!-- ── SIMPLE FORM ── -->
+            <form id="authForm" method="POST" action="/api/login">
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="email" id="email" placeholder="you@company.com" required />
+                    <input type="email" id="email" name="email" placeholder="you@company.com" required />
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="••••••••" required />
-                </div>
-                <div class="form-group" id="companyGroup" style="display:none;">
-                    <label for="companyName">Company Name</label>
-                    <input type="text" id="companyName" placeholder="Your company name" />
-                </div>
-
-                <div class="form-group" id="termsGroup" style="display: none; margin-top: 8px;">
-                    <div style="display: flex; align-items: flex-start; gap: 10px;">
-                        <input type="checkbox" id="agreeTerms" required style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
-                        <label for="agreeTerms" style="font-size: 0.9rem; color: #4a5a72; font-weight: normal; cursor: pointer; line-height: 1.5;">
-                            I agree to the <a href="terms.html" target="_blank" style="color: #0066ff; text-decoration: underline;">Terms & Conditions</a> and
-                            <a href="privacy.html" target="_blank" style="color: #0066ff; text-decoration: underline;">Privacy Policy</a>.
-                        </label>
-                    </div>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required />
                 </div>
 
                 <button type="submit" class="btn-primary full-width" id="authButton">Log In</button>
             </form>
 
             <div class="auth-footer">
-                <p id="toggleText">Don't have an account? <a href="#" id="toggleLink">Sign up</a></p>
+                <p>Don't have an account? <a href="#" id="toggleLink">Sign up</a></p>
             </div>
         </div>
     </div>
 
     <script>
-        // ── Get elements ──
+        // ── GET ELEMENTS ──
         const form = document.getElementById('authForm');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
-        const companyInput = document.getElementById('companyName');
-        const termsGroup = document.getElementById('termsGroup');
-        const companyGroup = document.getElementById('companyGroup');
-        const agreeCheckbox = document.getElementById('agreeTerms');
         const toggleLink = document.getElementById('toggleLink');
-        const formTitle = document.getElementById('formTitle');
-        const formSubtitle = document.getElementById('formSubtitle');
-        const authButton = document.getElementById('authButton');
-        const toggleText = document.getElementById('toggleText');
 
+        console.log('✅ login.html loaded');
+        console.log('📝 Form element:', form);
+        console.log('📧 Email input:', emailInput);
+        console.log('🔐 Password input:', passwordInput);
+
+        // ── TOGGLE LOGIN/SIGNUP ──
         let isLogin = true;
-
-        // ── Toggle Login / Signup ──
-        function toggleForm(e) {
-            if (e) e.preventDefault();
+        toggleLink.addEventListener('click', function(e) {
+            e.preventDefault();
             isLogin = !isLogin;
-
             if (isLogin) {
-                formTitle.textContent = 'Welcome Back';
-                formSubtitle.textContent = 'Log in to your dashboard';
-                authButton.textContent = 'Log In';
-                toggleText.innerHTML = `Don't have an account? <a href="#" id="toggleLink">Sign up</a>`;
-                companyGroup.style.display = 'none';
-                termsGroup.style.display = 'none';
-                agreeCheckbox.required = false;
+                document.querySelector('.auth-header h2').textContent = 'Welcome Back';
+                document.querySelector('.auth-header p').textContent = 'Log in to your dashboard';
+                document.getElementById('authButton').textContent = 'Log In';
+                toggleLink.textContent = 'Sign up';
+                toggleLink.parentElement.innerHTML = `Don't have an account? <a href="#" id="toggleLink">Sign up</a>`;
+                document.getElementById('authForm').action = '/api/login';
             } else {
-                formTitle.textContent = 'Create Your Account';
-                formSubtitle.textContent = 'Start monitoring your AI today';
-                authButton.textContent = 'Sign Up';
-                toggleText.innerHTML = `Already have an account? <a href="#" id="toggleLink">Log in</a>`;
-                companyGroup.style.display = 'block';
-                termsGroup.style.display = 'block';
-                agreeCheckbox.required = true;
+                document.querySelector('.auth-header h2').textContent = 'Create Your Account';
+                document.querySelector('.auth-header p').textContent = 'Start monitoring your AI today';
+                document.getElementById('authButton').textContent = 'Sign Up';
+                toggleLink.parentElement.innerHTML = `Already have an account? <a href="#" id="toggleLink">Log in</a>`;
+                document.getElementById('authForm').action = '/api/signup';
             }
+            document.getElementById('toggleLink').addEventListener('click', arguments.callee);
+        });
 
-            // Rebind toggle link
-            document.getElementById('toggleLink').addEventListener('click', toggleForm);
-        }
-
-        toggleLink.addEventListener('click', toggleForm);
-
-        // ── ──────────────────────────────────────────────
-        // ── ✅ FORM SUBMISSION (WITH DEBUG LOGS) ──
-        // ── ──────────────────────────────────────────────
-
-        form.addEventListener('submit', async function(event) {
-            // ── 1. STOP page refresh ──
-            event.preventDefault();
+        // ── FORM SUBMIT ──
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
             console.log('✅ Form submitted!');
+            console.log('📧 Email:', emailInput.value);
+            console.log('🔐 Password:', passwordInput.value ? '✅ Provided' : '❌ Missing');
 
             const email = emailInput.value.trim();
             const password = passwordInput.value.trim();
-            const companyName = companyInput.value.trim();
 
-            console.log('📧 Email:', email);
-            console.log('🔐 Password:', password ? '✅ Provided' : '❌ Missing');
-
-            // ── 2. Validate agreement for signup ──
-            if (!isLogin && !agreeCheckbox.checked) {
-                alert('Please agree to the Terms & Conditions and Privacy Policy.');
+            if (!email || !password) {
+                alert('Please fill in all fields.');
                 return;
             }
 
-            // ── 3. Build request ──
-            const endpoint = isLogin ? '/api/login' : '/api/signup';
-            const body = isLogin ? { email, password } : { email, password, companyName };
-
-            console.log('📡 Sending to:', endpoint);
-            console.log('📦 Payload:', body);
-
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
-                });
-
+            // ── Send to backend ──
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            })
+            .then(response => {
                 console.log('📨 Response status:', response.status);
-
-                const data = await response.json();
+                return response.json();
+            })
+            .then(data => {
                 console.log('📄 Response data:', data);
-
-                if (response.ok) {
+                if (data.token) {
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
-                    console.log('✅ Login successful, redirecting...');
                     window.location.href = 'dashboard.html';
                 } else {
                     alert(data.error || 'Login failed');
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('❌ Network error:', error);
                 alert('Network error. Make sure the server is running.');
-            }
+            });
         });
     </script>
 </body>
