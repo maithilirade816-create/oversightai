@@ -61,6 +61,7 @@
     </main>
 
     <script>
+        const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
         if (!token) window.location.href = 'login.html';
 
@@ -69,23 +70,26 @@
 
         function copyApiKey() {
             const key = document.getElementById('apiKeyDisplay').textContent;
-            if (key && key !== 'loading...') {
+            if (key && key !== 'loading...' && key !== 'No API key found') {
                 navigator.clipboard.writeText(key).then(() => {
-                    alert('✅ API key copied!');
+                    alert('✅ API key copied to clipboard!');
+                }).catch(() => {
+                    alert('❌ Could not copy. Please select and copy manually.');
                 });
             } else {
-                alert('❌ No API key available.');
+                alert('❌ No API key available. Please contact support.');
             }
         }
 
         async function loadSecurity() {
             try {
-                const response = await fetch('/api/dashboard', {
+                const response = await fetch(`${API_BASE}/api/dashboard`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.status === 401) {
                     localStorage.removeItem('token');
+                    localStorage.removeItem('user');
                     window.location.href = 'login.html';
                     return;
                 }

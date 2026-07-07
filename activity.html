@@ -58,7 +58,9 @@
     </main>
 
     <script>
+        const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
+
         if (!token) window.location.href = 'login.html';
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -66,14 +68,19 @@
 
         async function loadActivity() {
             try {
-                const response = await fetch('/api/dashboard', {
+                const response = await fetch(`${API_BASE}/api/dashboard`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.status === 401) {
                     localStorage.removeItem('token');
+                    localStorage.removeItem('user');
                     window.location.href = 'login.html';
                     return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch activity');
                 }
 
                 const data = await response.json();
@@ -103,7 +110,7 @@
                 }
 
                 const badge = document.getElementById('statusBadge');
-                if (data.metrics.alerts > 0) {
+                if (data.metrics?.alerts > 0) {
                     badge.textContent = `🔴 ${data.metrics.alerts} alerts pending`;
                     badge.style.background = '#fee2e2';
                     badge.style.color = '#dc2626';
