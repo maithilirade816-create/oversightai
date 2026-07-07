@@ -11,11 +11,11 @@
     <aside class="sidebar">
         <div class="logo">OversightAI</div>
         <nav class="sidebar-nav">
-            <a href="dashboard.html">📊 Dashboard</a>
-            <a href="activity.html" class="active">📋 Activity Log</a>
-            <a href="security.html">🛡️ Security</a>
-            <a href="support.html">💬 Support</a>
-            <a href="settings.html">⚙️ Settings</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="activity.html" class="active">Activity Log</a>
+            <a href="security.html">Security</a>
+            <a href="support.html">Support</a>
+            <a href="settings.html">Settings</a>
         </nav>
         <div class="sidebar-user">
             <span id="userEmail">User</span>
@@ -27,8 +27,8 @@
         <header class="dashboard-header">
             <h1>Activity Log</h1>
             <div class="header-actions">
-                <span id="statusBadge" class="status-badge">🟢 All systems normal</span>
-                <button class="btn-outline small" id="refreshBtn">🔄 Refresh</button>
+                <span id="statusBadge" class="status-badge">All systems normal</span>
+                <button class="btn-outline small" id="refreshBtn">Refresh</button>
             </div>
         </header>
 
@@ -48,7 +48,7 @@
                     <tbody id="activityLog">
                         <tr>
                             <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
-                                ⏳ Loading activity...
+                                Loading activity...
                             </td>
                         </tr>
                     </tbody>
@@ -58,14 +58,13 @@
     </main>
 
     <script>
-        // ── TEST: This should appear in console ──
-        console.log('✅ Script is running!');
+        console.log('Script is running!');
 
         const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
 
         if (!token) {
-            console.log('❌ No token found, redirecting...');
+            console.log('No token found, redirecting...');
             window.location.href = 'login.html';
         }
 
@@ -73,10 +72,10 @@
         if (user.email) document.getElementById('userEmail').textContent = user.email;
 
         async function loadActivity() {
-            console.log('📡 Fetching activity data...');
+            console.log('Fetching activity data...');
             try {
-                const response = await fetch(`${API_BASE}/api/dashboard`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(API_BASE + '/api/dashboard', {
+                    headers: { 'Authorization': 'Bearer ' + token }
                 });
 
                 if (response.status === 401) {
@@ -89,7 +88,7 @@
                 if (!response.ok) throw new Error('Failed to fetch activity');
 
                 const data = await response.json();
-                console.log('📊 Data received:', data);
+                console.log('Data received:', data);
 
                 const tbody = document.getElementById('activityLog');
                 tbody.innerHTML = '';
@@ -98,18 +97,18 @@
                     tbody.innerHTML = `
                         <tr>
                             <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
-                                ✅ No activity yet. Connect your AI to start monitoring.
+                                No activity yet. Connect your AI to start monitoring.
                             </td>
                         </tr>
                     `;
                 } else {
-                    data.activity.forEach(item => {
+                    data.activity.forEach(function(item) {
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${item.user || 'Unknown'}</td>
                             <td>${item.tool || 'Unknown'}</td>
                             <td>${item.prompt || ''}</td>
-                            <td><span class="status-badge-table ${item.status === 'safe' ? 'status-safe' : 'status-danger'}">${item.status === 'safe' ? '✅ Safe' : '⚠️ Flagged'}</span></td>
+                            <td><span class="status-badge-table ${item.status === 'safe' ? 'status-safe' : 'status-danger'}">${item.status === 'safe' ? 'Safe' : 'Flagged'}</span></td>
                             <td>${item.time || 'Just now'}</td>
                         `;
                         tbody.appendChild(row);
@@ -117,12 +116,12 @@
                 }
 
                 const badge = document.getElementById('statusBadge');
-                if (data.metrics?.alerts > 0) {
-                    badge.textContent = `🔴 ${data.metrics.alerts} alerts pending`;
+                if (data.metrics && data.metrics.alerts > 0) {
+                    badge.textContent = data.metrics.alerts + ' alerts pending';
                     badge.style.background = '#fee2e2';
                     badge.style.color = '#dc2626';
                 } else {
-                    badge.textContent = '🟢 All systems normal';
+                    badge.textContent = 'All systems normal';
                     badge.style.background = '#dbeafe';
                     badge.style.color = '#0066ff';
                 }
@@ -132,7 +131,7 @@
                 document.getElementById('activityLog').innerHTML = `
                     <tr>
                         <td colspan="5" style="text-align:center; padding:40px; color:#dc2626;">
-                            ⚠️ Could not connect to the server. Make sure the backend is running.
+                            Could not connect to the server. Make sure the backend is running.
                         </td>
                     </tr>
                 `;
