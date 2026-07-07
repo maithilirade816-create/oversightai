@@ -26,88 +26,55 @@
     <main class="dashboard-main">
         <header class="dashboard-header">
             <h1>Settings</h1>
-            <div class="header-actions">
-                <span class="status-badge">⚙️ Manage your account</span>
-            </div>
         </header>
 
-        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; margin-bottom: 24px;">
-            <h2 style="font-size: 1.25rem; margin-bottom: 8px;">👤 Account Information</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
-                <div>
-                    <label style="font-weight: 500; font-size: 0.9rem; color: #4a5a72; display: block; margin-bottom: 4px;">Email</label>
-                    <input type="email" id="userEmailDisplay" value="" disabled style="width: 100%; padding: 12px; border: 1px solid #d0d9e6; border-radius: 8px; background: #f8fafc; color: #0a1929;" />
-                </div>
-                <div>
-                    <label style="font-weight: 500; font-size: 0.9rem; color: #4a5a72; display: block; margin-bottom: 4px;">Company Name</label>
-                    <input type="text" id="companyNameDisplay" value="" disabled style="width: 100%; padding: 12px; border: 1px solid #d0d9e6; border-radius: 8px; background: #f8fafc; color: #0a1929;" />
-                </div>
-            </div>
-        </section>
-
-        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; margin-bottom: 24px;">
-            <h2 style="font-size: 1.25rem; margin-bottom: 8px;">🔑 Change Password</h2>
-            <form id="changePasswordForm" style="margin-top: 16px;">
-                <div class="form-group">
-                    <label for="currentPassword">Current Password</label>
-                    <input type="password" id="currentPassword" placeholder="Enter current password" required />
-                </div>
-                <div class="form-group">
-                    <label for="newPassword">New Password</label>
-                    <input type="password" id="newPassword" placeholder="Enter new password" required />
-                </div>
-                <button type="submit" class="btn-primary">Update Password</button>
-            </form>
-        </section>
-
-        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #fee2e2;">
-            <h2 style="font-size: 1.25rem; margin-bottom: 8px; color: #dc2626;">⚠️ Danger Zone</h2>
-            <p style="color: #4a5a72; margin-bottom: 16px;">Once you delete your account, there is no going back. Please be certain.</p>
-            <button onclick="deleteAccount()" style="background: #dc2626; color: white; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                🗑️ Delete Account
-            </button>
-        </section>
+        <div id="output" style="padding:20px; background:white; border-radius:12px;">
+            Loading...
+        </div>
     </main>
 
     <script>
-        const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
         if (!token) window.location.href = 'login.html';
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user.email) {
-            document.getElementById('userEmail').textContent = user.email;
-            document.getElementById('userEmailDisplay').value = user.email;
-            document.getElementById('companyNameDisplay').value = user.companyName || 'Not set';
+        document.getElementById('userEmail').textContent = user.email || 'User';
+
+        async function loadData() {
+            const output = document.getElementById('output');
+            output.innerHTML = '⏳ Loading...';
+
+            try {
+                const res = await fetch('https://oversightai.onrender.com/api/dashboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const data = await res.json();
+                output.innerHTML = `
+                    <p><strong>Email:</strong> ${data.email || user.email || 'N/A'}</p>
+                    <p><strong>Company:</strong> ${data.companyName || 'Not set'}</p>
+                    <p><strong>API Key:</strong> <code>${data.apiKey || 'N/A'}</code></p>
+                    <hr />
+                    <p>📌 Password change and account deletion coming soon.</p>
+                `;
+
+            } catch (err) {
+                output.innerHTML = `❌ Error: ${err.message}`;
+            }
         }
 
         document.getElementById('logoutBtn').addEventListener('click', function() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            localStorage.clear();
             window.location.href = 'login.html';
         });
 
-        document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-
-            if (!currentPassword || !newPassword) {
-                alert('Please fill in both fields.');
-                return;
-            }
-
-            alert('🔧 Password change will be available in the next update!');
-            this.reset();
-        });
-
-        function deleteAccount() {
-            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                if (confirm('Really? All your data will be permanently deleted.')) {
-                    alert('🗑️ Account deletion will be available in the next update.');
-                }
-            }
-        }
+        loadData();
     </script>
 </body>
 </html>

@@ -26,121 +26,50 @@
     <main class="dashboard-main">
         <header class="dashboard-header">
             <h1>Activity Log</h1>
-            <div class="header-actions">
-                <span id="statusBadge" class="status-badge">🟢 All systems normal</span>
-                <button class="btn-outline small" id="refreshBtn">🔄 Refresh</button>
-            </div>
+            <button id="refreshBtn">🔄 Refresh</button>
         </header>
 
-        <section class="activity-section">
-            <h2>All AI Activity</h2>
-            <div class="activity-table-container">
-                <table class="activity-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Tool</th>
-                            <th>Prompt Preview</th>
-                            <th>Status</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody id="activityLog">
-                        <tr>
-                            <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
-                                ⏳ Loading activity...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+        <div id="output" style="padding:20px; background:white; border-radius:12px;">
+            Loading...
+        </div>
     </main>
 
     <script>
-        const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
-
         if (!token) window.location.href = 'login.html';
 
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user.email) document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('userEmail').textContent = JSON.parse(localStorage.getItem('user') || '{}').email || 'User';
 
-        async function loadActivity() {
+        async function loadData() {
+            const output = document.getElementById('output');
+            output.innerHTML = '⏳ Loading...';
+
             try {
-                const response = await fetch(`${API_BASE}/api/dashboard`, {
+                const res = await fetch('https://oversightai.onrender.com/api/dashboard', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                if (response.status === 401) {
+                if (res.status === 401) {
                     localStorage.removeItem('token');
-                    localStorage.removeItem('user');
                     window.location.href = 'login.html';
                     return;
                 }
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch activity');
-                }
+                const data = await res.json();
+                output.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
 
-                const data = await response.json();
-                const tbody = document.getElementById('activityLog');
-                tbody.innerHTML = '';
-
-                if (!data.activity || data.activity.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
-                                ✅ No activity yet. Connect your AI to start monitoring.
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    data.activity.forEach(item => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.user || 'Unknown'}</td>
-                            <td>${item.tool || 'Unknown'}</td>
-                            <td>${item.prompt || ''}</td>
-                            <td><span class="status-badge-table ${item.status === 'safe' ? 'status-safe' : 'status-danger'}">${item.status === 'safe' ? '✅ Safe' : '⚠️ Flagged'}</span></td>
-                            <td>${item.time || 'Just now'}</td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                }
-
-                const badge = document.getElementById('statusBadge');
-                if (data.metrics?.alerts > 0) {
-                    badge.textContent = `🔴 ${data.metrics.alerts} alerts pending`;
-                    badge.style.background = '#fee2e2';
-                    badge.style.color = '#dc2626';
-                } else {
-                    badge.textContent = '🟢 All systems normal';
-                    badge.style.background = '#dbeafe';
-                    badge.style.color = '#0066ff';
-                }
-
-            } catch (error) {
-                console.error('Error loading activity:', error);
-                document.getElementById('activityLog').innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align:center; padding:40px; color:#dc2626;">
-                            ⚠️ Could not connect to the server. Make sure the backend is running.
-                        </td>
-                    </tr>
-                `;
+            } catch (err) {
+                output.innerHTML = `❌ Error: ${err.message}`;
             }
         }
 
+        document.getElementById('refreshBtn').addEventListener('click', loadData);
         document.getElementById('logoutBtn').addEventListener('click', function() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            localStorage.clear();
             window.location.href = 'login.html';
         });
 
-        document.getElementById('refreshBtn').addEventListener('click', loadActivity);
-        document.addEventListener('DOMContentLoaded', loadActivity);
-        setInterval(loadActivity, 30000);
+        loadData();
     </script>
 </body>
 </html>
