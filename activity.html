@@ -58,15 +58,22 @@
     </main>
 
     <script>
+        // ── TEST: This should appear in console ──
+        console.log('✅ Script is running!');
+
         const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
 
-        if (!token) window.location.href = 'login.html';
+        if (!token) {
+            console.log('❌ No token found, redirecting...');
+            window.location.href = 'login.html';
+        }
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (user.email) document.getElementById('userEmail').textContent = user.email;
 
         async function loadActivity() {
+            console.log('📡 Fetching activity data...');
             try {
                 const response = await fetch(`${API_BASE}/api/dashboard`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -82,6 +89,8 @@
                 if (!response.ok) throw new Error('Failed to fetch activity');
 
                 const data = await response.json();
+                console.log('📊 Data received:', data);
+
                 const tbody = document.getElementById('activityLog');
                 tbody.innerHTML = '';
 
