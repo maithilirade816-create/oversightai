@@ -17,31 +17,20 @@
             </div>
 
             <form id="authForm">
-                <!-- ── Email ── -->
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" placeholder="you@company.com" required />
                 </div>
-
-                <!-- ── Password ── -->
                 <div class="form-group">
                     <label for="password">Password</label>
                     <input type="password" id="password" placeholder="••••••••" required />
                 </div>
-
-                <!-- ── Username (only shows on Sign Up) ── -->
-                <div class="form-group" id="usernameGroup" style="display:none;">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" placeholder="Choose a username" />
-                </div>
-
-                <!-- ── Company Name (only shows on Sign Up) ── -->
                 <div class="form-group" id="companyGroup" style="display:none;">
                     <label for="companyName">Company Name</label>
                     <input type="text" id="companyName" placeholder="Your company name" />
                 </div>
 
-                <!-- ── ✅ LEGAL CHECKBOX ── -->
+                <!-- ✅ Legal Checkbox (only shows on Sign Up) -->
                 <div class="form-group" id="termsGroup" style="display: none; margin-top: 8px;">
                     <div style="display: flex; align-items: flex-start; gap: 10px;">
                         <input type="checkbox" id="agreeTerms" style="width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;">
@@ -58,17 +47,20 @@
             <div class="auth-footer">
                 <p id="toggleText">Don't have an account? <a href="#" id="toggleLink">Sign up</a></p>
             </div>
+
+            <div class="auth-badges">
+                <span>🔒 256-bit encryption</span>
+                <span>✅ SOC2 compliant</span>
+            </div>
         </div>
     </div>
 
     <script>
-        // ── Elements ──
+        // ── References ──
         const form = document.getElementById('authForm');
         const email = document.getElementById('email');
         const password = document.getElementById('password');
-        const username = document.getElementById('username');
         const companyName = document.getElementById('companyName');
-        const usernameGroup = document.getElementById('usernameGroup');
         const companyGroup = document.getElementById('companyGroup');
         const termsGroup = document.getElementById('termsGroup');
         const agreeTerms = document.getElementById('agreeTerms');
@@ -81,8 +73,8 @@
         let isLogin = true;
 
         // ── Toggle Login / Signup ──
-        toggleLink.addEventListener('click', function(e) {
-            e.preventDefault();
+        function toggleForm(e) {
+            if (e) e.preventDefault();
             isLogin = !isLogin;
 
             if (isLogin) {
@@ -90,7 +82,6 @@
                 formSubtitle.textContent = 'Log in to your dashboard';
                 authButton.textContent = 'Log In';
                 toggleText.innerHTML = `Don't have an account? <a href="#" id="toggleLink">Sign up</a>`;
-                usernameGroup.style.display = 'none';
                 companyGroup.style.display = 'none';
                 termsGroup.style.display = 'none';
             } else {
@@ -98,14 +89,16 @@
                 formSubtitle.textContent = 'Start monitoring your AI today';
                 authButton.textContent = 'Sign Up';
                 toggleText.innerHTML = `Already have an account? <a href="#" id="toggleLink">Log in</a>`;
-                usernameGroup.style.display = 'block';
                 companyGroup.style.display = 'block';
                 termsGroup.style.display = 'block';
             }
 
             // Re-bind toggle link
-            document.getElementById('toggleLink').addEventListener('click', arguments.callee);
-        });
+            document.getElementById('toggleLink').addEventListener('click', toggleForm);
+        }
+
+        // ── Attach toggle listener ──
+        toggleLink.addEventListener('click', toggleForm);
 
         // ── Submit ──
         form.addEventListener('submit', async function(e) {
@@ -113,10 +106,9 @@
 
             const emailValue = email.value.trim();
             const passwordValue = password.value.trim();
-            const usernameValue = username.value.trim();
             const companyValue = companyName.value.trim();
 
-            // ── ✅ Validate checkbox for signup ──
+            // ✅ Check legal agreement for signup
             if (!isLogin && !agreeTerms.checked) {
                 alert('You must agree to the Terms & Conditions and Privacy Policy to create an account.');
                 return;
@@ -125,7 +117,7 @@
             const endpoint = isLogin ? '/api/login' : '/api/signup';
             const body = isLogin 
                 ? { email: emailValue, password: passwordValue } 
-                : { email: emailValue, password: passwordValue, username: usernameValue, companyName: companyValue };
+                : { email: emailValue, password: passwordValue, companyName: companyValue };
 
             try {
                 const res = await fetch(endpoint, {
