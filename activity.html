@@ -2,56 +2,56 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Activity Log — OversightAI</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Activity Log</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f7fa; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        button { padding: 10px 20px; background: #0066ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #0052cc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e9edf3; }
+        th { background: #f8fafc; font-weight: 600; }
+        .status-safe { color: #0d9488; }
+        .status-danger { color: #dc2626; }
+        .logout { float: right; background: #dc2626; }
+        .logout:hover { background: #b91c1c; }
+        .error { color: #dc2626; padding: 20px; background: #fee2e2; border-radius: 8px; }
+        .loading { color: #4a5a72; padding: 20px; }
+    </style>
 </head>
 <body>
 
-    <aside class="sidebar">
-        <div class="logo">OversightAI</div>
-        <nav class="sidebar-nav">
-            <a href="dashboard.html">Dashboard</a>
-            <a href="activity.html" class="active">Activity Log</a>
-            <a href="security.html">Security</a>
-            <a href="support.html">Support</a>
-            <a href="settings.html">Settings</a>
-        </nav>
-        <div class="sidebar-user">
-            <span id="userEmail">User</span>
-            <button id="logoutBtn">Logout</button>
+    <div class="container">
+        <h1>📋 Activity Log</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <span id="userEmail" style="font-weight: 500;">User</span>
+            <div>
+                <button id="refreshBtn">🔄 Refresh</button>
+                <button id="logoutBtn" class="logout">Logout</button>
+            </div>
         </div>
-    </aside>
-
-    <main class="dashboard-main">
-        <header class="dashboard-header">
-            <h1>Activity Log</h1>
-            <button id="refreshBtn">Refresh</button>
-        </header>
-
-        <!-- ── THIS IS WHERE DATA GOES ── -->
-        <div id="output" style="padding:20px; background:white; border-radius:12px; margin-top:20px; font-family:monospace;">
-            Loading...
+        <div id="output">
+            <div class="loading">⏳ Loading activity...</div>
         </div>
-    </main>
+    </div>
 
     <script>
-        console.log('Script is running!');
+        // ── THE CODE THAT WORKS ──
+        console.log('✅ Script loaded');
 
-        var token = localStorage.getItem('token');
+        const token = localStorage.getItem('token');
         if (!token) {
-            console.log('No token found, redirecting...');
             window.location.href = 'login.html';
         }
 
-        var user = JSON.parse(localStorage.getItem('user') || '{}');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (user.email) {
             document.getElementById('userEmail').textContent = user.email;
         }
 
-        function loadData() {
-            var output = document.getElementById('output');
-            output.innerHTML = 'Loading...';
-            console.log('Fetching activity data...');
+        function loadActivity() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<div class="loading">⏳ Loading activity...</div>';
 
             fetch('https://oversightai.onrender.com/api/dashboard', {
                 headers: { 'Authorization': 'Bearer ' + token }
@@ -60,54 +60,60 @@
                 if (response.status === 401) {
                     localStorage.removeItem('token');
                     window.location.href = 'login.html';
-                    return;
+                    throw new Error('Unauthorized');
                 }
                 return response.json();
             })
             .then(function(data) {
-                console.log('Data received:', data);
-                // ── DISPLAY THE DATA ──
-                var html = '<h3>Metrics</h3>';
-                html += '<ul>';
-                html += '<li>Total Requests: ' + (data.metrics.totalRequests || 0) + '</li>';
-                html += '<li>Leaks Blocked: ' + (data.metrics.leaksBlocked || 0) + '</li>';
-                html += '<li>Active Agents: ' + (data.metrics.activeAgents || 0) + '</li>';
-                html += '<li>Alerts: ' + (data.metrics.alerts || 0) + '</li>';
+                console.log('📊 Data received:', data);
+                let html = '';
+
+                // ── Metrics ──
+                html += '<h3>📊 Metrics</h3>';
+                html += '<ul style="list-style: none; padding: 0; display: flex; gap: 20px; flex-wrap: wrap;">';
+                html += '<li style="background: #f0f5ff; padding: 12px 20px; border-radius: 8px;"><strong>Total Requests:</strong> ' + (data.metrics.totalRequests || 0) + '</li>';
+                html += '<li style="background: #f0f5ff; padding: 12px 20px; border-radius: 8px;"><strong>Leaks Blocked:</strong> ' + (data.metrics.leaksBlocked || 0) + '</li>';
+                html += '<li style="background: #f0f5ff; padding: 12px 20px; border-radius: 8px;"><strong>Active Agents:</strong> ' + (data.metrics.activeAgents || 0) + '</li>';
+                html += '<li style="background: #f0f5ff; padding: 12px 20px; border-radius: 8px;"><strong>Alerts:</strong> ' + (data.metrics.alerts || 0) + '</li>';
                 html += '</ul>';
 
-                html += '<h3>Activity</h3>';
+                // ── Activity Table ──
+                html += '<h3>📝 Recent Activity</h3>';
                 if (data.activity && data.activity.length > 0) {
-                    html += '<table border="1" cellpadding="8" style="width:100%; border-collapse:collapse;">';
+                    html += '<table>';
                     html += '<tr><th>User</th><th>Tool</th><th>Prompt</th><th>Status</th><th>Time</th></tr>';
                     data.activity.forEach(function(item) {
+                        const statusClass = item.status === 'safe' ? 'status-safe' : 'status-danger';
                         html += '<tr>';
                         html += '<td>' + (item.user || 'Unknown') + '</td>';
                         html += '<td>' + (item.tool || 'Unknown') + '</td>';
                         html += '<td>' + (item.prompt || '') + '</td>';
-                        html += '<td>' + (item.status || 'Unknown') + '</td>';
+                        html += '<td class="' + statusClass + '">' + (item.status || 'Unknown') + '</td>';
                         html += '<td>' + (item.time || 'Just now') + '</td>';
                         html += '</tr>';
                     });
                     html += '</table>';
                 } else {
-                    html += '<p>No activity yet.</p>';
+                    html += '<p style="color: #4a5a72;">✅ No activity yet. Connect your AI to start monitoring.</p>';
                 }
 
                 output.innerHTML = html;
             })
             .catch(function(error) {
-                console.error('Error:', error);
-                output.innerHTML = 'Error: ' + error.message;
+                console.error('❌ Error:', error);
+                output.innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
             });
         }
 
-        document.getElementById('refreshBtn').addEventListener('click', loadData);
+        // ── Event Listeners ──
+        document.getElementById('refreshBtn').addEventListener('click', loadActivity);
         document.getElementById('logoutBtn').addEventListener('click', function() {
             localStorage.clear();
             window.location.href = 'login.html';
         });
 
-        loadData();
+        // ── Load on page open ──
+        loadActivity();
     </script>
 </body>
 </html>
