@@ -17,7 +17,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── ────────────────────────────────────────────── ──
-// ── ✅ FIND THE CORRECT FOLDER FOR STATIC FILES ──
+// ── FIND THE CORRECT FOLDER FOR STATIC FILES ──
 // ── ────────────────────────────────────────────── ──
 
 let staticPath = path.join(__dirname, '..');
@@ -161,7 +161,7 @@ app.post('/api/login', async (req, res) => {
 // ── PROTECTED ROUTES ──
 // ── ────────────────────────────────────────────── ──
 
-// ── Auth Middleware ──
+// ── Auth Middleware (JWT) ──
 const authenticate = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
@@ -182,7 +182,27 @@ const authenticate = async (req, res, next) => {
     }
 };
 
-// ── Dashboard ──
+// ── API Key Middleware (for SDK) ──
+const authenticateWithApiKey = async (req, res, next) => {
+    try {
+        const apiKey = req.headers.authorization?.split(' ')[1];
+        if (!apiKey) {
+            return res.status(401).json({ error: 'API key required' });
+        }
+
+        const user = await User.findOne({ apiKey });
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid API key' });
+        }
+
+        req.user = user;
+        next();
+    } catch (error) {
+        res.status(401).json({ error: 'Invalid API key' });
+    }
+};
+
+// ── Dashboard (JWT) ──
 app.get('/api/dashboard', authenticate, async (req, res) => {
     try {
         const userId = req.user._id;
@@ -211,7 +231,6 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
                 status: a.status,
                 time: a.createdAt ? new Date(a.createdAt).toLocaleString() : 'Just now',
             })),
-            // ── ✅ API KEY ADDED HERE ──
             apiKey: req.user.apiKey,
         });
     } catch (error) {
@@ -220,11 +239,37 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
     }
 });
 
-// ── Monitor AI ──
-app.post('/api/monitor', authenticate, async (req, res) => {
+// ── Monitor AI (API Key OR JWT) ──
+app.post('/api/monitor', async (req, res) => {
     const { prompt, tool } = req.body;
 
     try {
+        // ── Try API key first, then JWT ──
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.split(' ')[1];
+
+        let user = null;
+
+        // Try API key
+        if (token && token.startsWith('osk_')) {
+            user = await User.findOne({ apiKey: token });
+        }
+
+        // If not API key, try JWT
+        if (!user) {
+            try {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                user = await User.findById(decoded.userId);
+            } catch (err) {
+                // JWT verification failed
+            }
+        }
+
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        // ── Scan for sensitive data ──
         const sensitivePatterns = {
             apiKey: /sk-[a-zA-Z0-9]{32,}/,
             ssn: /\d{3}-\d{2}-\d{4}/,
@@ -243,7 +288,7 @@ app.post('/api/monitor', authenticate, async (req, res) => {
         }
 
         const activity = new Activity({
-            userId: req.user._id,
+            userId: user._id,
             tool: tool || 'Unknown',
             prompt,
             status: detectedRisk ? 'blocked' : 'safe',
@@ -252,9 +297,9 @@ app.post('/api/monitor', authenticate, async (req, res) => {
 
         if (detectedRisk) {
             const alert = new Alert({
-                userId: req.user._id,
+                userId: user._id,
                 type: 'danger',
-                message: `⚠️ ${detectedRisk} detected in prompt from ${req.user.email}`,
+                message: `⚠️ ${detectedRisk} detected in prompt from ${user.email}`,
             });
             await alert.save();
             activity.response = 'Blocked due to sensitive data';
