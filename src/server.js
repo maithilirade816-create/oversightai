@@ -202,6 +202,98 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
             })),
             apiKey: req.user.apiKey,
         });
+// ── Monitor AI ──
+app.post('/api/monitor', async (req, res) => {
+    const { prompt, tool } = req.body;
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Authorization header required' });
+    }
+
+    let user = null;
+
+    // ── Try API key ──
+    if (token.startsWith('osk_')) {
+        user = await User.findOne({ apiKey: token });
+    }
+
+    // ── Try JWT ──
+    if (!user) {
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            user = await User.findById(decoded.userId);
+        } catch (err) {}
+    }
+
+    if (!user) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    // ── Scan for sensitive data ──
+    const sensitivePatterns = {
+        apiKey: /sk-[a-zA-Z0-9]{32,}/,
+        ssn: /\d{3}-\d{2}-\d{4}/,
+        creditCard: /\d{4}-\d{4}-\d{4}-\d{4}/,
+        email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
+    };
+
+    let detectedRisk = null;
+    let riskType = 'none';
+    for (const [type, pattern] of Object.entries(sensitivePatterns)) {
+        if (pattern.test(prompt)) {
+            detectedRisk = type;
+            riskType = type;
+            break;
+        }
+    }
+
+    const activity = new Activity({
+        userId: user._id,
+        tool: tool || 'Unknown',
+        prompt,
+        status: detectedRisk ? 'blocked' : 'safe',
+        riskType,
+    });
+
+    if (detectedRisk) {
+        const alert = new Alert({
+            userId: user._id,
+            type: 'danger',
+            message: `⚠️ ${detectedRisk} detected in prompt from ${user.email}`,
+        });
+        await alert.save();
+        activity.response = 'Blocked due to sensitive data';
+        await activity.save();
+
+        return res.json({
+            status: 'danger',
+            message: `⚠️ ${detectedRisk} detected and blocked!`,
+            risk: detectedRisk,
+            alertId: alert._id,
+        });
+    }
+
+    const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 100,
+    });
+
+    activity.response = completion.choices[0].message.content;
+    await activity.save();
+
+    res.json({
+        status: 'safe',
+        message: '✅ Prompt is safe. AI response generated.',
+        response: completion.choices[0].message.content,
+    });
+});
     } catch (error) {
         console.error('Dashboard error:', error);
         res.status(500).json({ error: 'Server error' });
