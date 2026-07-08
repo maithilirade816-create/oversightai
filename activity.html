@@ -1,116 +1,142 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Activity Log</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f7fa; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        button { padding: 10px 20px; background: #0066ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
-        button:hover { background: #0052cc; }
-        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e9edf3; }
-        th { background: #f8fafc; font-weight: 600; }
-        .status-safe { color: #0d9488; }
-        .status-danger { color: #dc2626; }
-        .logout { float: right; background: #dc2626; }
-        .logout:hover { background: #b91c1c; }
-        .error { color: #dc2626; padding: 20px; background: #fee2e2; border-radius: 8px; }
-        .loading { color: #4a5a72; padding: 20px; }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Activity Log — OversightAI</title>
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-    <div class="container">
-        <h1>📋 Activity Log</h1>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <span id="userEmail" style="font-weight: 500;">User</span>
-            <div>
-                <button id="refreshBtn">🔄 Refresh</button>
-                <button id="logoutBtn" class="logout">Logout</button>
+    <aside class="sidebar">
+        <div class="logo">OversightAI</div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html">📊 Dashboard</a>
+            <a href="/activity.html" class="active">📋 Activity Log</a>
+            <a href="/security.html">🛡️ Security</a>
+            <a href="/support.html">💬 Support</a>
+            <a href="/settings.html">⚙️ Settings</a>
+        </nav>
+        <div class="sidebar-user">
+            <span id="userEmail">User</span>
+            <button id="logoutBtn">Logout</button>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <h1>Activity Log</h1>
+            <div class="header-actions">
+                <span id="statusBadge" class="status-badge">🟢 All systems normal</span>
+                <button class="btn-outline small" id="refreshBtn">🔄 Refresh</button>
             </div>
-        </div>
-        <div id="output">
-            <div class="loading">⏳ Loading activity...</div>
-        </div>
-    </div>
+        </header>
+
+        <section class="activity-section">
+            <h2>All AI Activity</h2>
+            <div class="activity-table-container">
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Tool</th>
+                            <th>Prompt Preview</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityLog">
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
+                                ⏳ Loading activity...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
 
     <script>
-        console.log('✅ Script loaded');
-
+        const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
-        if (!token) {
-            window.location.href = 'login.html';
-        }
+
+        if (!token) window.location.href = 'login.html';
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user.email) {
-            document.getElementById('userEmail').textContent = user.email;
-        }
+        if (user.email) document.getElementById('userEmail').textContent = user.email;
 
-        function loadActivity() {
-            const output = document.getElementById('output');
-            output.innerHTML = '<div class="loading">⏳ Loading activity...</div>';
+        async function loadActivity() {
+            try {
+                const response = await fetch(`${API_BASE}/api/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
-            fetch('https://oversightai.onrender.com/api/dashboard', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            })
-            .then(function(response) {
                 if (response.status === 401) {
                     localStorage.removeItem('token');
+                    localStorage.removeItem('user');
                     window.location.href = 'login.html';
-                    throw new Error('Unauthorized');
+                    return;
                 }
-                return response.json();
-            })
-            .then(function(data) {
-                console.log('📊 Data received:', data);
-                let html = '';
 
-                // ── Metrics ──
-                html += '<h3>📊 Metrics</h3>';
-                html += '<ul style="list-style: none; padding: 0; display: flex; gap: 20px; flex-wrap: wrap;">';
-                html += '<li style="background: #f0f5ff; padding: 12px 20px; border-radius: 8px;"><strong>Total Requests:</strong> ' + (data.metrics.totalRequests || 0) + '</li>';
-                html += '<li style="background: #f0f5ff; padding: 12px 20px; border-radius: 8px;"><strong>Leaks Blocked:</strong> ' + (data.metrics.leaksBlocked || 0) + '</li>';
-                html += '<li style="background: #f0f5ff; padding: 12px 20px; border-radius: 8px;"><strong>Active Agents:</strong> ' + (data.metrics.activeAgents || 0) + '</li>';
-                html += '<li style="background: #f0f5ff; padding: 12px 20px; border-radius: 8px;"><strong>Alerts:</strong> ' + (data.metrics.alerts || 0) + '</li>';
-                html += '</ul>';
+                const data = await response.json();
+                const tbody = document.getElementById('activityLog');
+                tbody.innerHTML = '';
 
-                // ── Activity Table ──
-                html += '<h3>📝 Recent Activity</h3>';
-                if (data.activity && data.activity.length > 0) {
-                    html += '<table>';
-                    html += '<tr><th>User</th><th>Tool</th><th>Prompt</th><th>Status</th><th>Time</th></tr>';
-                    data.activity.forEach(function(item) {
-                        const statusClass = item.status === 'safe' ? 'status-safe' : 'status-danger';
-                        html += '<tr>';
-                        html += '<td>' + (item.user || 'Unknown') + '</td>';
-                        html += '<td>' + (item.tool || 'Unknown') + '</td>';
-                        html += '<td>' + (item.prompt || '') + '</td>';
-                        html += '<td class="' + statusClass + '">' + (item.status || 'Unknown') + '</td>';
-                        html += '<td>' + (item.time || 'Just now') + '</td>';
-                        html += '</tr>';
-                    });
-                    html += '</table>';
+                if (!data.activity || data.activity.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding:40px; color:#4a5a72;">
+                                ✅ No activity yet. Connect your AI to start monitoring.
+                            </td>
+                        </tr>
+                    `;
                 } else {
-                    html += '<p style="color: #4a5a72;">✅ No activity yet. Connect your AI to start monitoring.</p>';
+                    data.activity.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.user || 'Unknown'}</td>
+                            <td>${item.tool || 'Unknown'}</td>
+                            <td>${item.prompt || ''}</td>
+                            <td><span class="status-badge-table ${item.status === 'safe' ? 'status-safe' : 'status-danger'}">${item.status === 'safe' ? '✅ Safe' : '⚠️ Flagged'}</span></td>
+                            <td>${item.time || 'Just now'}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
                 }
 
-                output.innerHTML = html;
-            })
-            .catch(function(error) {
-                console.error('❌ Error:', error);
-                output.innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
-            });
+                const badge = document.getElementById('statusBadge');
+                if (data.metrics?.alerts > 0) {
+                    badge.textContent = `🔴 ${data.metrics.alerts} alerts pending`;
+                    badge.style.background = '#fee2e2';
+                    badge.style.color = '#dc2626';
+                } else {
+                    badge.textContent = '🟢 All systems normal';
+                    badge.style.background = '#dbeafe';
+                    badge.style.color = '#0066ff';
+                }
+
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                document.getElementById('activityLog').innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding:40px; color:#dc2626;">
+                            ⚠️ Could not connect to the server. Make sure the backend is running.
+                        </td>
+                    </tr>
+                `;
+            }
         }
 
-        document.getElementById('refreshBtn').addEventListener('click', loadActivity);
         document.getElementById('logoutBtn').addEventListener('click', function() {
-            localStorage.clear();
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             window.location.href = 'login.html';
         });
 
-        loadActivity();
+        document.getElementById('refreshBtn').addEventListener('click', loadActivity);
+        document.addEventListener('DOMContentLoaded', loadActivity);
+        setInterval(loadActivity, 30000);
     </script>
 </body>
 </html>

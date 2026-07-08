@@ -11,11 +11,11 @@
     <aside class="sidebar">
         <div class="logo">OversightAI</div>
         <nav class="sidebar-nav">
-            <a href="#" class="active">📊 Dashboard</a>
-            <a href="#">📋 Activity Log</a>
-            <a href="#">🛡️ Security</a>
-            <a href="support.html">💬 Support</a>
-            <a href="#">⚙️ Settings</a>
+            <a href="/dashboard.html" class="active">📊 Dashboard</a>
+            <a href="/activity.html">📋 Activity Log</a>
+            <a href="/security.html">🛡️ Security</a>
+            <a href="/support.html">💬 Support</a>
+            <a href="/settings.html">⚙️ Settings</a>
         </nav>
         <div class="sidebar-user">
             <span id="userEmail">User</span>
@@ -32,7 +32,6 @@
             </div>
         </header>
 
-        <!-- Metrics Grid -->
         <section class="metrics-grid" id="metricsGrid">
             <div class="metric-card">
                 <span class="metric-label">Total AI Requests</span>
@@ -56,7 +55,6 @@
             </div>
         </section>
 
-        <!-- API Key Section -->
         <section class="api-key-section" style="margin-top: 30px; background: white; padding: 24px; border-radius: 12px; border: 1px solid #e9edf3;">
             <h3 style="margin-bottom: 8px;">🔑 Your API Key</h3>
             <p style="color: #4a5a72; font-size: 0.95rem; margin-bottom: 12px;">
@@ -75,7 +73,6 @@
             </p>
         </section>
 
-        <!-- Recent Activity -->
         <section class="activity-section" style="margin-top: 30px;">
             <h2>Recent Activity</h2>
             <div class="activity-table-container">
@@ -102,43 +99,31 @@
     </main>
 
     <script>
-        // ── Check authentication ──
+        const API_BASE = 'https://oversightai.onrender.com';
         const token = localStorage.getItem('token');
-        if (!token) {
-            window.location.href = 'login.html';
-        }
 
-        // ── Show user email ──
+        if (!token) window.location.href = 'login.html';
+
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user.email) {
-            document.getElementById('userEmail').textContent = user.email;
-        }
+        if (user.email) document.getElementById('userEmail').textContent = user.email;
 
-        // ── Copy API Key ──
         function copyApiKey() {
-            const keyElement = document.getElementById('apiKeyDisplay');
-            const key = keyElement.textContent;
+            const key = document.getElementById('apiKeyDisplay').textContent;
             if (key && key !== 'loading...' && key !== 'No API key found') {
                 navigator.clipboard.writeText(key).then(() => {
-                    const btn = event.target;
-                    const originalText = btn.textContent;
-                    btn.textContent = '✅ Copied!';
-                    setTimeout(() => { btn.textContent = originalText; }, 2000);
+                    alert('✅ API key copied!');
                 }).catch(() => {
                     alert('❌ Could not copy. Please select and copy manually.');
                 });
             } else {
-                alert('❌ No API key available. Please contact support.');
+                alert('❌ No API key available.');
             }
         }
 
-        // ── Fetch dashboard data ──
         async function loadDashboard() {
             try {
-                const response = await fetch('/api/dashboard', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                const response = await fetch(`${API_BASE}/api/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.status === 401) {
@@ -148,22 +133,14 @@
                     return;
                 }
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch dashboard data');
-                }
-
                 const data = await response.json();
 
-                // Update metrics
                 document.getElementById('totalRequests').textContent = data.metrics.totalRequests || 0;
                 document.getElementById('leaksBlocked').textContent = data.metrics.leaksBlocked || 0;
                 document.getElementById('activeAgents').textContent = data.metrics.activeAgents || 0;
                 document.getElementById('alerts').textContent = data.metrics.alerts || 0;
-
-                // Display API Key
                 document.getElementById('apiKeyDisplay').textContent = data.apiKey || 'No API key found';
 
-                // Update activity log
                 const tbody = document.getElementById('activityLog');
                 tbody.innerHTML = '';
 
@@ -189,7 +166,6 @@
                     });
                 }
 
-                // Update status badge
                 const badge = document.getElementById('statusBadge');
                 if (data.metrics.alerts > 0) {
                     badge.textContent = `🔴 ${data.metrics.alerts} alerts pending`;
@@ -211,20 +187,14 @@
             }
         }
 
-        // ── Logout ──
         document.getElementById('logoutBtn').addEventListener('click', function() {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = 'login.html';
         });
 
-        // ── Refresh button ──
         document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
-
-        // ── Load on page open ──
         document.addEventListener('DOMContentLoaded', loadDashboard);
-
-        // ── Auto-refresh every 30 seconds ──
         setInterval(loadDashboard, 30000);
     </script>
 </body>
