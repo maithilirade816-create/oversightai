@@ -2,3 +2,5 @@
 node_modules/
 .DS_Store".gitignoredir" 
 "src/routes/.vercel/" 
+.gitignoredir 
+src/routes/.vercel/ 
