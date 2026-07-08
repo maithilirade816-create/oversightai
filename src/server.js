@@ -16,10 +16,7 @@ const Alert = require('./models/Alert');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── ────────────────────────────────────────────── ──
-// ── FIND THE CORRECT FOLDER FOR STATIC FILES ──
-// ── ────────────────────────────────────────────── ──
-
+// ── Find the correct folder for static files ──
 let staticPath = path.join(__dirname, '..');
 
 if (!fs.existsSync(path.join(staticPath, 'index.html'))) {
@@ -68,16 +65,12 @@ app.get('/app.js', (req, res) => {
     res.sendFile(path.join(staticPath, 'app.js'));
 });
 
-// ── ────────────────────────────────────────────── ──
 // ── MongoDB Connection ──
-// ── ────────────────────────────────────────────── ──
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ MongoDB connected'))
     .catch(err => console.error('❌ MongoDB error:', err.message));
 
-// ── ────────────────────────────────────────────── ──
 // ── JWT Helpers ──
-// ── ────────────────────────────────────────────── ──
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
 function generateApiKey() {
@@ -88,9 +81,7 @@ function generateJWT(user) {
     return jwt.sign({ userId: user._id }, JWT_SECRET);
 }
 
-// ── ────────────────────────────────────────────── ──
 // ── AUTH ROUTES ──
-// ── ────────────────────────────────────────────── ──
 
 // ── Signup ──
 app.post('/api/signup', async (req, res) => {
@@ -157,9 +148,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// ── ────────────────────────────────────────────── ──
 // ── PROTECTED ROUTES ──
-// ── ────────────────────────────────────────────── ──
 
 // ── Auth Middleware (JWT) ──
 const authenticate = async (req, res, next) => {
@@ -219,11 +208,10 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
     }
 });
 
-// ── ────────────────────────────────────────────── ──
-// ── ✅ MONITOR ROUTE ──
-// ── ────────────────────────────────────────────── ──
-
+// ── MONITOR ROUTE ──
 app.post('/api/monitor', async (req, res) => {
+    console.log('📡 Monitor endpoint called');
+
     const { prompt, tool } = req.body;
     const authHeader = req.headers.authorization || '';
     const token = authHeader.split(' ')[1];
@@ -346,14 +334,10 @@ app.put('/api/alerts/:id/resolve', authenticate, async (req, res) => {
     }
 });
 
-// ── ────────────────────────────────────────────── ──
 // ── EXPORT FOR RENDER ──
-// ── ────────────────────────────────────────────── ──
 module.exports = app;
 
-// ── ────────────────────────────────────────────── ──
 // ── FOR LOCAL: Run the server ──
-// ── ────────────────────────────────────────────── ──
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`✅ OversightAI backend running on http://localhost:${PORT}`);
