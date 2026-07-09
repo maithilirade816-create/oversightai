@@ -225,7 +225,7 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
 });
 
 // ── ────────────────────────────────────────────── ──
-// ── ✅ MONITOR ROUTE WITH TRY-CATCH ──
+// ── ✅ MONITOR ROUTE WITH DEBUG LOGS ──
 // ── ────────────────────────────────────────────── ──
 
 app.post('/api/monitor', async (req, res) => {
@@ -236,26 +236,41 @@ app.post('/api/monitor', async (req, res) => {
         const authHeader = req.headers.authorization || '';
         const token = authHeader.split(' ')[1];
 
+        console.log('🔑 Full Authorization header:', req.headers.authorization);
+        console.log('🔑 Extracted token:', token);
+
         if (!token) {
+            console.log('❌ No token provided');
             return res.status(401).json({ error: 'Authorization header required' });
         }
 
         let user = null;
 
+        // ── Try API key ──
         if (token.startsWith('osk_')) {
+            console.log('🔍 Looking for user with API key:', token);
             user = await User.findOne({ apiKey: token });
+            console.log('👤 User found by API key:', user ? user.email : 'NOT FOUND');
         }
 
+        // ── Try JWT ──
         if (!user) {
             try {
+                console.log('🔍 Trying JWT...');
                 const decoded = jwt.verify(token, JWT_SECRET);
                 user = await User.findById(decoded.userId);
-            } catch (err) {}
+                console.log('👤 User found by JWT:', user ? user.email : 'NOT FOUND');
+            } catch (err) {
+                console.log('❌ JWT verification failed:', err.message);
+            }
         }
 
         if (!user) {
+            console.log('❌ No user found for token');
             return res.status(401).json({ error: 'Invalid token' });
         }
+
+        console.log('✅ User authenticated:', user.email);
 
         // ── Scan for sensitive data ──
         const sensitivePatterns = {
@@ -337,9 +352,9 @@ app.post('/api/monitor', async (req, res) => {
 
     } catch (error) {
         console.error('❌ Monitor route error:', error);
-        res.status(500).json({ 
-            error: 'Internal server error', 
-            details: error.message 
+        res.status(500).json({
+            error: 'Internal server error',
+            details: error.message
         });
     }
 });
