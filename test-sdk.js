@@ -10,7 +10,7 @@ class MockOpenAI {
 }
 
 // ── Your API key (from your dashboard) ──
-const API_KEY = 'osk_your_api_key_here';
+const API_KEY = 'osk_hog7dsdi28o0v7s9x8j6mi';
 
 // ── Wrap the client ──
 const openai = watch(new MockOpenAI(), {

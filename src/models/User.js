@@ -6,11 +6,15 @@ const UserSchema = new mongoose.Schema({
     password: { type: String },
     name: { type: String, default: '' },
     companyName: { type: String, default: '' },
-    apiKey: { type: String, unique: true },
+    apiKey: { type: String, unique: true, sparse: true },
     isSocialLogin: { type: Boolean, default: false },
     googleId: { type: String, sparse: true },
     facebookId: { type: String, sparse: true },
     twitterId: { type: String, sparse: true },
+    // ── ✅ BRING YOUR OWN KEY ──
+    openaiApiKey: { type: String, default: '' },
+    anthropicApiKey: { type: String, default: '' },
+    geminiApiKey: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now },
 });
 

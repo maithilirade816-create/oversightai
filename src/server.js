@@ -224,8 +224,26 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
     }
 });
 
+// ── Save API Keys ──
+app.put('/api/settings/api-keys', authenticate, async (req, res) => {
+    try {
+        const { openai, anthropic, gemini } = req.body;
+        const user = req.user;
+
+        if (openai !== undefined) user.openaiApiKey = openai;
+        if (anthropic !== undefined) user.anthropicApiKey = anthropic;
+        if (gemini !== undefined) user.geminiApiKey = gemini;
+
+        await user.save();
+        res.json({ message: 'API keys updated successfully' });
+    } catch (error) {
+        console.error('Error saving API keys:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // ── ────────────────────────────────────────────── ──
-// ── ✅ MONITOR ROUTE WITH DEBUG LOGS ──
+// ── ✅ MONITOR ROUTE WITH BYOK ──
 // ── ────────────────────────────────────────────── ──
 
 app.post('/api/monitor', async (req, res) => {
@@ -236,11 +254,7 @@ app.post('/api/monitor', async (req, res) => {
         const authHeader = req.headers.authorization || '';
         const token = authHeader.split(' ')[1];
 
-        console.log('🔑 Full Authorization header:', req.headers.authorization);
-        console.log('🔑 Extracted token:', token);
-
         if (!token) {
-            console.log('❌ No token provided');
             return res.status(401).json({ error: 'Authorization header required' });
         }
 
@@ -248,29 +262,20 @@ app.post('/api/monitor', async (req, res) => {
 
         // ── Try API key ──
         if (token.startsWith('osk_')) {
-            console.log('🔍 Looking for user with API key:', token);
             user = await User.findOne({ apiKey: token });
-            console.log('👤 User found by API key:', user ? user.email : 'NOT FOUND');
         }
 
         // ── Try JWT ──
         if (!user) {
             try {
-                console.log('🔍 Trying JWT...');
                 const decoded = jwt.verify(token, JWT_SECRET);
                 user = await User.findById(decoded.userId);
-                console.log('👤 User found by JWT:', user ? user.email : 'NOT FOUND');
-            } catch (err) {
-                console.log('❌ JWT verification failed:', err.message);
-            }
+            } catch (err) {}
         }
 
         if (!user) {
-            console.log('❌ No user found for token');
             return res.status(401).json({ error: 'Invalid token' });
         }
-
-        console.log('✅ User authenticated:', user.email);
 
         // ── Scan for sensitive data ──
         const sensitivePatterns = {
@@ -290,16 +295,15 @@ app.post('/api/monitor', async (req, res) => {
             }
         }
 
-        // ── Save activity (always) ──
+        // ── Save activity ──
         const activity = new Activity({
             userId: user._id,
-            tool: tool || 'Unknown',
+            tool: tool || 'Other',
             prompt,
             status: detectedRisk ? 'blocked' : 'safe',
             riskType,
         });
 
-        // ── If risk detected, block and alert ──
         if (detectedRisk) {
             const alert = new Alert({
                 userId: user._id,
@@ -309,7 +313,6 @@ app.post('/api/monitor', async (req, res) => {
             await alert.save();
             activity.response = 'Blocked due to sensitive data';
             await activity.save();
-console.log('✅ Activity saved for user:', user.email);
 
             return res.json({
                 status: 'danger',
@@ -319,14 +322,17 @@ console.log('✅ Activity saved for user:', user.email);
             });
         }
 
-        // ── Try OpenAI (with error handling) ──
+        // ── ────────────────────────────────────────────
+        // ── ✅ BRING YOUR OWN KEY ──
+        // ── ────────────────────────────────────────────
+
         let openaiResponse = null;
         let openaiError = null;
 
         try {
-            const openai = new OpenAI({
-                apiKey: process.env.OPENAI_API_KEY,
-            });
+            const userKey = user.openaiApiKey || process.env.OPENAI_API_KEY;
+            console.log('🔑 Using OpenAI key:', userKey ? '✅ Present' : '❌ Missing');
+            const openai = new OpenAI({ apiKey: userKey });
 
             const completion = await openai.chat.completions.create({
                 model: 'gpt-3.5-turbo',
@@ -337,26 +343,24 @@ console.log('✅ Activity saved for user:', user.email);
             openaiResponse = completion.choices[0].message.content;
         } catch (err) {
             openaiError = err.message;
-            console.error('OpenAI error:', err.message);
+            console.error('❌ OpenAI error:', err.message);
         }
 
-        // ── Save response (even if OpenAI fails) ──
         activity.response = openaiResponse || `OpenAI error: ${openaiError}`;
         await activity.save();
 
         res.json({
             status: 'safe',
-            message: openaiResponse ? '✅ Prompt is safe. AI response generated.' : '⚠️ OpenAI quota exceeded, but activity was logged.',
+            message: openaiResponse
+                ? '✅ Prompt is safe. AI response generated.'
+                : '⚠️ OpenAI quota exceeded, but activity was logged.',
             response: openaiResponse,
             error: openaiError || null,
         });
 
     } catch (error) {
         console.error('❌ Monitor route error:', error);
-        res.status(500).json({
-            error: 'Internal server error',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 

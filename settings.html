@@ -31,6 +31,7 @@
             </div>
         </header>
 
+        <!-- ── Account Info ── -->
         <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; margin-bottom: 24px;">
             <h2 style="font-size: 1.25rem; margin-bottom: 8px;">👤 Account Information</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
@@ -45,6 +46,31 @@
             </div>
         </section>
 
+        <!-- ── ✅ BRING YOUR OWN KEY ── -->
+        <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; margin-bottom: 24px;">
+            <h2 style="font-size: 1.25rem; margin-bottom: 8px;">🔑 AI API Keys</h2>
+            <p style="color: #4a5a72; font-size: 0.95rem; margin-bottom: 16px;">
+                Add your own API keys to use your own AI credits. We'll use your key instead of ours.
+            </p>
+
+            <form id="apiKeysForm">
+                <div class="form-group">
+                    <label for="openaiKey">OpenAI API Key</label>
+                    <input type="password" id="openaiKey" placeholder="sk-..." />
+                </div>
+                <div class="form-group">
+                    <label for="anthropicKey">Anthropic API Key (optional)</label>
+                    <input type="password" id="anthropicKey" placeholder="sk-ant-..." />
+                </div>
+                <div class="form-group">
+                    <label for="geminiKey">Gemini API Key (optional)</label>
+                    <input type="password" id="geminiKey" placeholder="AIzaSy..." />
+                </div>
+                <button type="submit" class="btn-primary">Save API Keys</button>
+            </form>
+        </section>
+
+        <!-- ── Change Password ── -->
         <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #e9edf3; margin-bottom: 24px;">
             <h2 style="font-size: 1.25rem; margin-bottom: 8px;">🔑 Change Password</h2>
             <form id="changePasswordForm" style="margin-top: 16px;">
@@ -60,6 +86,7 @@
             </form>
         </section>
 
+        <!-- ── Danger Zone ── -->
         <section style="background: white; padding: 32px; border-radius: 12px; border: 1px solid #fee2e2;">
             <h2 style="font-size: 1.25rem; margin-bottom: 8px; color: #dc2626;">⚠️ Danger Zone</h2>
             <p style="color: #4a5a72; margin-bottom: 16px;">Once you delete your account, there is no going back. Please be certain.</p>
@@ -82,11 +109,52 @@
             document.getElementById('companyNameDisplay').value = user.companyName || 'Not set';
         }
 
+        // ── ────────────────────────────────────────────
+        // ── API Keys Form ──
+        // ── ────────────────────────────────────────────
+
+        document.getElementById('apiKeysForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const openai = document.getElementById('openaiKey').value.trim();
+            const anthropic = document.getElementById('anthropicKey').value.trim();
+            const gemini = document.getElementById('geminiKey').value.trim();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/settings/api-keys`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ openai, anthropic, gemini })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert('✅ API keys saved!');
+                } else {
+                    alert(data.error || 'Failed to save keys.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Network error.');
+            }
+        });
+
+        // ── ────────────────────────────────────────────
+        // ── Logout ──
+        // ── ────────────────────────────────────────────
+
         document.getElementById('logoutBtn').addEventListener('click', function() {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = 'login.html';
         });
+
+        // ── ────────────────────────────────────────────
+        // ── Change Password ──
+        // ── ────────────────────────────────────────────
 
         document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -101,6 +169,10 @@
             alert('🔧 Password change will be available in the next update!');
             this.reset();
         });
+
+        // ── ────────────────────────────────────────────
+        // ── Delete Account ──
+        // ── ────────────────────────────────────────────
 
         function deleteAccount() {
             if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
