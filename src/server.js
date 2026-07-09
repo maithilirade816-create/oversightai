@@ -13,9 +13,6 @@ const User = require('./models/User');
 const Activity = require('./models/Activity');
 const Alert = require('./models/Alert');
 
-console.log('✅ Server.js loaded');
-console.log('✅ Models imported');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -38,11 +35,8 @@ console.log('📁 STATIC FILES PATH:', staticPath);
 app.use(cors());
 app.use(express.json());
 
-console.log('✅ Middleware loaded');
-
 // ── TEST ROUTE ──
 app.get('/ping', (req, res) => {
-    console.log('📡 Ping route called');
     res.json({ message: 'pong' });
 });
 
@@ -79,8 +73,6 @@ app.get('/app.js', (req, res) => {
     res.sendFile(path.join(staticPath, 'app.js'));
 });
 
-console.log('✅ Static routes loaded');
-
 // ── ────────────────────────────────────────────── ──
 // ── MongoDB Connection ──
 // ── ────────────────────────────────────────────── ──
@@ -101,15 +93,12 @@ function generateJWT(user) {
     return jwt.sign({ userId: user._id }, JWT_SECRET);
 }
 
-console.log('✅ JWT helpers loaded');
-
 // ── ────────────────────────────────────────────── ──
 // ── AUTH ROUTES ──
 // ── ────────────────────────────────────────────── ──
 
 // ── Signup ──
 app.post('/api/signup', async (req, res) => {
-    console.log('📡 Signup route called');
     try {
         const { email, password, companyName } = req.body;
 
@@ -144,7 +133,6 @@ app.post('/api/signup', async (req, res) => {
 
 // ── Login ──
 app.post('/api/login', async (req, res) => {
-    console.log('📡 Login route called');
     try {
         const { email, password } = req.body;
 
@@ -201,7 +189,6 @@ const authenticate = async (req, res, next) => {
 
 // ── Dashboard ──
 app.get('/api/dashboard', authenticate, async (req, res) => {
-    console.log('📡 Dashboard route called');
     try {
         const userId = req.user._id;
 
@@ -238,20 +225,15 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
 });
 
 // ── ────────────────────────────────────────────── ──
-// ── ✅ MONITOR ROUTE WITH DEBUG LOGS ──
+// ── ✅ MONITOR ROUTE — FINAL PRODUCTION VERSION ──
 // ── ────────────────────────────────────────────── ──
 
 app.post('/api/monitor', async (req, res) => {
-    console.log('📡 Monitor endpoint called');
-
     const { prompt, tool } = req.body;
     const authHeader = req.headers.authorization || '';
     const token = authHeader.split(' ')[1];
 
-    console.log('🔑 Token received:', token);
-
     if (!token) {
-        console.log('❌ No token provided');
         return res.status(401).json({ error: 'Authorization header required' });
     }
 
@@ -259,29 +241,20 @@ app.post('/api/monitor', async (req, res) => {
 
     // ── Try API key ──
     if (token.startsWith('osk_')) {
-        console.log('🔍 Looking for user with API key:', token);
         user = await User.findOne({ apiKey: token });
-        console.log('👤 User found by API key:', user ? user.email : 'NOT FOUND');
     }
 
     // ── Try JWT ──
     if (!user) {
         try {
-            console.log('🔍 Trying JWT...');
             const decoded = jwt.verify(token, JWT_SECRET);
             user = await User.findById(decoded.userId);
-            console.log('👤 User found by JWT:', user ? user.email : 'NOT FOUND');
-        } catch (err) {
-            console.log('❌ JWT verification failed:', err.message);
-        }
+        } catch (err) {}
     }
 
     if (!user) {
-        console.log('❌ No user found for token');
         return res.status(401).json({ error: 'Invalid token' });
     }
-
-    console.log('✅ User authenticated:', user.email);
 
     // ── Scan for sensitive data ──
     const sensitivePatterns = {
@@ -301,6 +274,7 @@ app.post('/api/monitor', async (req, res) => {
         }
     }
 
+    // ── Save activity (always) ──
     const activity = new Activity({
         userId: user._id,
         tool: tool || 'Unknown',
@@ -309,6 +283,7 @@ app.post('/api/monitor', async (req, res) => {
         riskType,
     });
 
+    // ── If risk detected, block and alert ──
     if (detectedRisk) {
         const alert = new Alert({
             userId: user._id,
@@ -327,31 +302,41 @@ app.post('/api/monitor', async (req, res) => {
         });
     }
 
-    const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-    });
+    // ── Try OpenAI (with error handling) ──
+    let openaiResponse = null;
+    let openaiError = null;
 
-    const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 100,
-    });
+    try {
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
 
-    activity.response = completion.choices[0].message.content;
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 100,
+        });
+
+        openaiResponse = completion.choices[0].message.content;
+    } catch (err) {
+        openaiError = err.message;
+        console.error('OpenAI error:', err.message);
+    }
+
+    // ── Save response (even if OpenAI fails) ──
+    activity.response = openaiResponse || `OpenAI error: ${openaiError}`;
     await activity.save();
 
     res.json({
         status: 'safe',
-        message: '✅ Prompt is safe. AI response generated.',
-        response: completion.choices[0].message.content,
+        message: openaiResponse ? '✅ Prompt is safe. AI response generated.' : '⚠️ OpenAI quota exceeded, but activity was logged.',
+        response: openaiResponse,
+        error: openaiError || null,
     });
 });
 
-console.log('✅ Monitor route registered');
-
 // ── Get Alerts ──
 app.get('/api/alerts', authenticate, async (req, res) => {
-    console.log('📡 Alerts route called');
     try {
         const alerts = await Alert.find({ userId: req.user._id })
             .sort({ createdAt: -1 })
@@ -366,7 +351,6 @@ app.get('/api/alerts', authenticate, async (req, res) => {
 
 // ── Resolve Alert ──
 app.put('/api/alerts/:id/resolve', authenticate, async (req, res) => {
-    console.log('📡 Resolve alert route called');
     try {
         const alert = await Alert.findOne({ _id: req.params.id, userId: req.user._id });
         if (!alert) {
@@ -386,8 +370,6 @@ app.put('/api/alerts/:id/resolve', authenticate, async (req, res) => {
 // ── EXPORT FOR RENDER ──
 // ── ────────────────────────────────────────────── ──
 module.exports = app;
-
-console.log('✅ Server.js fully loaded — waiting for requests');
 
 // ── ────────────────────────────────────────────── ──
 // ── FOR LOCAL: Run the server ──

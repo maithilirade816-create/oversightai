@@ -1,7 +1,7 @@
 // ── test-sdk.js ──
 const { watch } = require('./sdk/index.js');
 
-// ── Simulated OpenAI client ──
+// ── Mock OpenAI client ──
 class MockOpenAI {
     async chat(messages) {
         console.log('📨 Mock OpenAI received:', messages);
@@ -10,7 +10,7 @@ class MockOpenAI {
 }
 
 // ── Your API key (from your dashboard) ──
-const API_KEY = 'osk_hog7dsdi28o0v7s9x8j6mi';  // REPLACE WITH YOUR FULL API KEY
+const API_KEY = 'osk_your_api_key_here';
 
 // ── Wrap the client ──
 const openai = watch(new MockOpenAI(), {
