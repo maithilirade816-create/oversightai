@@ -309,6 +309,7 @@ app.post('/api/monitor', async (req, res) => {
             await alert.save();
             activity.response = 'Blocked due to sensitive data';
             await activity.save();
+console.log('✅ Activity saved for user:', user.email);
 
             return res.json({
                 status: 'danger',
